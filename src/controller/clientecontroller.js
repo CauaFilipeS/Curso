@@ -39,7 +39,7 @@ exports.listarClientes = async (req, res) => {
 exports.listarClientesCpf = async (req, res) => {
     const { cpf } = req.params;
     try {
-        const [result] = await db.query('SELECT * FROM cliente cpf = ?', [cpf]);
+        const [result] = await db.query('SELECT * FROM cliente WHERE cpf = ?', [cpf]);
         if (result.length === 0) {
             return res.status(404).json({ error: 'Cliente não encontrado'});
         }
@@ -70,5 +70,48 @@ if (error) {
     } catch (err) {
         console.error('Erro ao adicionar cliente:', err);
         res.status(500).json({ error: 'Erro ao adicionar cliente' });
+    }
+};
+
+// Atualizar um cliente
+
+exports.atualizarCliente = async (req, res) => {
+    const { cpf } = req.params;
+    const { nome, endereco, bairro, cidade, cep, telefone, email, senha } = req.body;
+//Validação de dados
+const { error } = clienteSchema.validate({cpf, nome, endereco, bairro, cidade, cep, telefone, email, senha});
+    if (error) {
+        return res.status(404).json({ error: error.details[0].message });
+    }
+    try {
+        //verificar se o cliente existe antes de atualizar
+        const [result] = await db.query('SELECT * FROM cliente WHERE cpf = ?', [cpf]);
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Cliente não encontrado'})
+        }
+        //Criptografando a senha
+        const hash = await bcrypt.hash(senha, 10);
+        const clienteAtualizado = { cpf, nome, endereco, bairro, cidade, cep, telefone, email, senha: hash };
+        await db.query('UPDATE cliente SET ? WHERE cpf = ?', [clienteAtualizado, cpf]);
+        res.json({ message: 'Cliente atualizado com sucesso' });
+    }   catch (err) {
+        console.error('Erro ao atualizar cliente:', err);
+        res.status(500).json({ error: 'Erro ao atualizar cliente' });
+    }
+};
+//Deletar um cliente
+exports.deletarCliente = async (req, res) => {
+    const { cpf } = req.params;
+    try {
+        // verifica se o cliente existe antes de deletar
+        const [result] = await db.query('SELECT * FROM cliente WHERE cpf = ?', [cpf]);
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Cliente não encontrado' });
+        }
+        await db.query('DELETE FROM cliente WHERE cpf = ?', [cpf]);
+        res.json({ message: 'Cliente deletado com sucesso' });
+    } catch (err) {
+        console.error('Erro ao deletar cliente:', err);
+        res.status(500).json({ error: 'Erro ao deletar cliente' });
     }
 };

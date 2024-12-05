@@ -20,6 +20,6 @@ const db = mysql.createPool({
     }   catch (err) {
         console.error('Erro ao conectar ao banco de dados:', err);
     }
- });//();
+ })();
 
 module.exports = db;
