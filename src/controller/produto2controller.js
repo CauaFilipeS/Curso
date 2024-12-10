@@ -2,19 +2,19 @@ const db = require('../db/db');
 const Joi = require('joi');
 
 const produtoSchema = Joi.object({
-    idProduto: Joi.string().length().required(),
-    nomeProduto: Joi.string().required(30),
-    tipo: Joi.string().required(30),
-    descricao: Joi.string().required().max(30)
+    idProduto: Joi.string().required(),
+    nomeProduto: Joi.string().required(),
+    tipo: Joi.string().required(),
+    descricao: Joi.string().required().max(30),
     valorUnit: Joi.string().required(),
-    imagem: Joi.string().required(200)
+    imagem: Joi.string().required()
 });
 
 // Listar todos os produtos
 exports.listarProdutos = async (req, res) => {
     try {
-    const [result] = await db.query('SELECT * FROM pedido');
-    res.json(result);
+        const [result] = await db.query('SELECT * FROM produto');
+        res.json(result);
     } catch (err) {
         console.error('Erro ao buscar produtos:', err);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -27,7 +27,7 @@ exports.listarProdutosId = async (req, res) => {
     try {
         const [result] = await db.query('SELECT * FROM produto WHERE idProduto = ?', [idProduto]);
         if (result.length === 0) {
-            return res.status(404).json({ error: 'Produto não encontrado'});
+            return res.status(404).json({ error: 'Produto não encontrado' });
         }
         res.json(result[0]);
     } catch (err) {
@@ -60,21 +60,51 @@ exports.atualizarProduto = async (req, res) => {
     const { idProduto } = req.params;
     const { nomeProduto, tipo, descricao, valorUnit, imagem } = req.body;
     //Validação de dados
-    const { error } = produtoSchema.validate({ idProduto, nomeProduto, tipo, descricao, valorUnit, imagem});
+    const { error } = produtoSchema.validate({ idProduto, nomeProduto, tipo, descricao, valorUnit, imagem });
     if (error) {
         return res.status(404).json({ error: error.details[0].message });
     }
     try {
         //verificar se o produto existe antes de atualizar
         const [result] = await db.query('SELECT * FROM produto WHERE idProduto = ?', [idProduto]);
-        if (result.length === 0 ) {
-            return res.status(404).json({ error: 'Produto não encontrado'})
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Produto não encontrado' })
         }
         const produtoAtualizado = { idProduto, nomeProduto, tipo, descricao, valorUnit, imagem };
         await db.query('UPDATE produto SET ? WHERE idProduto = ?', produtoAtualizado, idProduto);
         res.json({ message: 'Produto atualizado com sucesso' });
     } catch (err) {
         console.error('Erro ao atualizar produto:', err);
-        res.status(500.json({ error: 'Erro ao atualizar Produto'}))
+        res.status(500).json({ error: 'Erro ao atualizar Produto' })
+    }
+};
+//Deletar um produto
+exports.deletarProduto = async (req, res) => {
+    const { idProduto } = req.params;
+    try {
+        //Verificar se o produto existe antes de deeletar
+        const [result] = await db.query('SELECT * FROM produto WHERE idProduto = ?', [idProduto]);
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+        await db.query('DELETE FROM produto WHERE idProduto = ?', [idProduto]);
+        res.json({ message: 'Produto deletado com sucesso' });
+    } catch (err) {
+        console.error('Erro ao deletar produto', err);
+        res.status(500).json({ error: 'Erro ao deletar produto' });
+    }
+};
+exports.buscarProdutoNome = async (req, res) => {
+    const { nomeProduto } = req.params;
+
+    try {
+        const [result] = await db.query('SELECT * FROM produto WHERE nomeProduto LIKE ?', [`${nomeProduto}%`]);
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+        res.json(result);
+    } catch (err) {
+        console.error('Error ao buscar produto:', err);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
